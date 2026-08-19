@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>бабки бабки</title>
+<link rel="icon" href="data:,">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#F1F1EE; --surface:#FFFFFF; --ink:#17181B; --ink-soft:#6E7075; --ink-faint:#A6A8AC;
+    --line:#E1E2DF; --savings:#1E7A4C; --debt:#B23B3B;
+    --font-display:'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-body:'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); }
+  .wrap{ max-width:640px; margin:0 auto; padding:28px 20px 60px; }
+
+  .topbar{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px; }
+  .brand{ font-family:var(--font-display); font-size:26px; font-weight:700; letter-spacing:-0.01em; text-transform:lowercase; }
+  .brand-sub{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .topbar-right{ display:flex; align-items:center; gap:10px; }
+  .save-note{ font-size:11px; color:var(--ink-faint); }
+  .save-note.error{ color:var(--debt); }
+  .logout-btn{ font-size:11px; color:var(--ink-soft); background:none; border:1px solid var(--line); border-radius:20px; padding:4px 10px; cursor:pointer; }
+
+  .tabs{ display:flex; gap:4px; margin-bottom:22px; border-bottom:1px solid var(--line); }
+  .tab{ font-family:var(--font-body); font-size:13.5px; color:var(--ink-soft); background:none; border:none;
+        padding:9px 12px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tab.active{ color:var(--ink); border-bottom-color:var(--ink); font-weight:600; }
+
+  .stack{ display:flex; flex-direction:column; gap:16px; }
+
+  .month-switcher{ display:flex; align-items:center; justify-content:center; gap:18px; }
+  .month-switcher button{ background:var(--surface); border:1px solid var(--line); border-radius:8px; width:30px; height:30px;
+        font-size:16px; color:var(--ink); cursor:pointer; }
+  .month-label{ font-family:var(--font-display); font-size:14.5px; font-weight:600; text-transform:capitalize; min-width:130px; text-align:center; }
+
+  .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .summary-card{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 12px; border-top:3px solid var(--line); }
+  .summary-card.savings{ border-top-color:var(--savings); }
+  .summary-card.debt{ border-top-color:var(--debt); }
+  .summary-label{ font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; }
+  .summary-value{ font-size:16px; font-weight:600; }
+
+  .panel{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  .panel-title{ font-family:var(--font-display); font-size:14.5px; font-weight:600; margin-bottom:14px; }
+  .panel-title-row{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+  .panel-title-row .panel-title{ margin-bottom:0; }
+
+  .swatch{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle; position:relative; top:-1px; }
+  .swatch-solid{ background:var(--ink); }
+  .swatch-stripe{ background:repeating-linear-gradient(135deg, var(--ink-faint), var(--ink-faint) 2px, transparent 2px, transparent 4px); border:1px solid var(--ink-faint); }
+
+  .limit-row + .limit-row{ margin-top:18px; }
+  .limit-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .limit-label{ font-size:13px; font-weight:500; display:flex; align-items:center; }
+  .limit-figures{ font-size:12px; color:var(--ink-soft); }
+  .limit-of{ color:var(--ink-soft); }
+  .limit-track{ position:relative; height:10px; background:var(--bg); border-radius:5px; overflow:hidden; }
+  .limit-fill{ height:100%; border-radius:5px; transition:width .3s ease; }
+  .fill-solid{ background:var(--ink); }
+  .fill-stripe{ background:repeating-linear-gradient(135deg, var(--ink-faint), var(--ink-faint) 4px, #d3d4d1 4px, #d3d4d1 8px); }
+  .limit-fill.over{ background:var(--debt) !important; }
+  .limit-ticks{ position:absolute; inset:0; display:flex; justify-content:space-between; padding:0 1px; pointer-events:none; }
+  .limit-ticks span{ width:1px; background:rgba(255,255,255,0.6); }
+  .limit-warning{ font-size:11px; margin-top:5px; color:var(--debt); }
+
+  .card-mini-list{ display:flex; flex-direction:column; gap:10px; }
+  .card-mini{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--bg); border-radius:10px; }
+  .card-mini-name{ font-size:13.5px; font-weight:500; }
+  .card-mini-type{ font-size:11px; color:var(--ink-soft); }
+  .card-mini-balance{ font-size:14px; font-weight:600; }
+
+  .tone-savings{ color:var(--savings); }
+  .tone-debt{ color:var(--debt); }
+  .mono{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+
+  form.panel{ display:flex; flex-direction:column; gap:12px; }
+  .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field{ display:flex; flex-direction:column; gap:5px; font-size:12px; color:var(--ink-soft); }
+  .field input, .field select{
+    font-family:var(--font-body); font-size:14px; color:var(--ink); background:var(--bg);
+    border:1px solid var(--line); border-radius:8px; padding:9px 10px; outline:none; width:100%;
+  }
+  .field input:focus, .field select:focus{ border-color:var(--ink-faint); }
+
+  .segmented{ display:flex; background:var(--bg); border-radius:8px; padding:3px; width:fit-content; }
+  .segmented button{ border:none; background:none; padding:7px 16px; border-radius:6px; font-size:13px; color:var(--ink-soft); cursor:pointer; }
+  .segmented button.active{ background:var(--surface); color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.08); }
+
+  .btn-primary{ align-self:flex-start; background:var(--ink); color:var(--bg); border:none; border-radius:8px;
+        padding:10px 18px; font-size:13.5px; font-weight:600; cursor:pointer; }
+  .btn-primary:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .tag-filter{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{ font-family:var(--font-body); font-size:11px; color:var(--ink-soft); background:var(--bg);
+         border:1px solid var(--line); border-radius:20px; padding:4px 10px; cursor:pointer; }
+  .chip.active{ background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .chip.static{ cursor:default; }
+
+  .tx-list{ display:flex; flex-direction:column; }
+  .tx-row{ display:flex; align-items:flex-start; gap:10px; padding:11px 0; border-bottom:1px solid var(--line); }
+  .tx-row:last-child{ border-bottom:none; }
+  .tx-main{ flex:1; min-width:0; }
+  .tx-note{ font-size:13.5px; font-weight:500; }
+  .tx-meta{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; display:flex; align-items:center; flex-wrap:wrap; gap:2px; }
+  .tx-tags{ display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
+  .tx-amount{ font-size:13.5px; font-weight:600; white-space:nowrap; padding-top:1px; }
+  .tx-delete{ background:none; border:none; color:var(--ink-faint); cursor:pointer; font-size:13px; padding:4px; }
+  .tx-delete:hover{ color:var(--debt); }
+
+  .card-full-list{ display:flex; flex-direction:column; gap:10px; }
+  .card-full-row{ display:grid; grid-template-columns:1.4fr 1fr 1.2fr auto; gap:8px; align-items:center; }
+  .card-full-row select{ font-family:var(--font-body); font-size:13px; border:1px solid var(--line); border-radius:8px; padding:8px; background:var(--bg); }
+  .card-name-input{ font-family:var(--font-body); font-size:13.5px; font-weight:500; border:1px solid var(--line); border-radius:8px; padding:8px 9px; background:var(--bg); width:100%; }
+  .balance-edit{ display:flex; align-items:center; gap:6px; }
+  .balance-edit input{ font-size:13px; border:1px solid var(--line); border-radius:8px; padding:8px; background:var(--bg); width:100%; }
+  .balance-label{ font-size:10.5px; color:var(--ink-soft); white-space:nowrap; }
+
+  .about-text{ font-size:12.5px; line-height:1.6; color:var(--ink-soft); margin:0; }
+  .empty{ font-size:12.5px; color:var(--ink-soft); text-align:center; padding:14px 0; }
+
+  /* login screen */
+  .login-wrap{ min-height:70vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:18px; }
+  .login-card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:28px; max-width:340px; width:100%; }
+  .login-card input{ font-family:var(--font-body); font-size:14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; width:100%; margin:14px 0; outline:none; background:var(--bg); }
+  .login-msg{ font-size:12px; color:var(--ink-soft); margin-top:10px; }
+  .login-msg.error{ color:var(--debt); }
+
+  @media (max-width:480px){
+    .grid-3{ grid-template-columns:1fr; }
+    .form-row{ grid-template-columns:1fr; }
+    .card-full-row{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">Загружаю…</div>
+
+<script>
+"use strict";
+
+// ====== НАСТРОЙ ЭТИ ДВЕ СТРОКИ ПОСЛЕ СОЗДАНИЯ ПРОЕКТА В SUPABASE ======
+const SUPABASE_URL = "https://jjakzfcysqwqptuoqzmj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_gRAQcVU0QYgnTfYXiB1jTw_UxkRIAe8";
+// =======================================================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const DEFAULT_STATE = {
+  currency: "₽",
+  limits: { fixed: 60000, lifestyle: 40000 },
+  cards: [
+    { id: uid(), name: "Дебетовая", type: "debit", balance: 0 },
+    { id: uid(), name: "Кредитная", type: "credit", balance: 0 },
+  ],
+  transactions: [],
+};
+
+let session = null;
+let state = null;
+let saveStatus = "idle"; // idle | saving | saved | error
+let ui = { tab: "dashboard", month: monthKey(todayISO()), activeTag: null };
+
+// ---------- helpers ----------
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function monthKey(iso){ return iso.slice(0,7); }
+const MONTHS_RU = ["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
+function fmtMonth(key){ const [y,m]=key.split("-").map(Number); return MONTHS_RU[m-1]+" "+y; }
+function fmtMoney(n, currency){
+  currency = currency || (state && state.currency) || "₽";
+  const neg = n < 0;
+  const v = Math.abs(Math.round(n)).toLocaleString("ru-RU");
+  return (neg?"−":"") + v + " " + currency;
+}
+function shiftMonth(key, delta){
+  const [y,m]=key.split("-").map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function parseTags(raw){
+  return Array.from(new Set(raw.split(",").map(t=>t.trim().toLowerCase()).filter(Boolean)));
+}
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function catLabel(cat){ return cat === "fixed" ? "Обязательные" : "Образ жизни"; }
+
+// ---------- auth ----------
+async function init(){
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  sb.auth.onAuthStateChange((_event, s) => { session = s; boot(); });
+  await boot();
+}
+
+async function boot(){
+  if(!session){ state = null; renderLogin(); return; }
+  if(!state){ await loadState(); }
+  render();
+}
+
+async function sendMagicLink(email){
+  const el = document.getElementById("login-msg");
+  el.textContent = "Отправляю…";
+  el.className = "login-msg";
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.href }
+  });
+  if(error){ el.textContent = "Ошибка: " + error.message; el.className = "login-msg error"; }
+  else { el.textContent = "Ссылка отправлена на почту — перейди по ней с любого устройства."; }
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  state = null;
+}
+
+// ---------- data ----------
+async function loadState(){
+  const { data, error } = await sb
+    .from("budget_state")
+    .select("data")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+  if(error){ console.error(error); }
+  if(data && data.data){ state = data.data; }
+  else{
+    state = structuredClone(DEFAULT_STATE);
+    await persist();
+  }
+}
+
+async function persist(){
+  saveStatus = "saving"; render();
+  try{
+    const { error } = await sb.from("budget_state").upsert({
+      user_id: session.user.id,
+      data: state,
+      updated_at: new Date().toISOString(),
+    });
+    saveStatus = error ? "error" : "saved";
+    if(error) console.error(error);
+  }catch(e){
+    saveStatus = "error"; console.error(e);
+  }
+  render();
+}
+
+// ---------- mutations ----------
+function applyTxToCards(tx, sign){
+  state.cards = state.cards.map(c=>{
+    if(c.id !== tx.cardId) return c;
+    const delta = tx.type === "expense" ? -tx.amount : tx.amount;
+    return { ...c, balance: c.balance + sign*delta };
+  });
+}
+async function addTransaction(tx){
+  state.transactions.unshift({ ...tx, id: uid() });
+  applyTxToCards(tx, 1);
+  await persist();
+}
+async function deleteTransaction(id){
+  const tx = state.transactions.find(t=>t.id===id);
+  if(!tx) return;
+  state.transactions = state.transactions.filter(t=>t.id!==id);
+  applyTxToCards(tx, -1);
+  await persist();
+}
+async function addCard(card){
+  state.cards.push({ ...card, id: uid() });
+  await persist();
+}
+async function updateCardField(id, field, value){
+  state.cards = state.cards.map(c=>c.id===id ? {...c, [field]: value} : c);
+  await persist();
+}
+async function deleteCard(id){
+  state.cards = state.cards.filter(c=>c.id!==id);
+  state.transactions = state.transactions.filter(t=>t.cardId!==id);
+  await persist();
+}
+async function setLimits(fixed, lifestyle){
+  state.limits = { fixed, lifestyle };
+  await persist();
+}
+async function setCurrency(cur){
+  state.currency = cur;
+  await persist();
+}
+
+// ---------- render: login ----------
+function renderLogin(){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="login-wrap">
+      <div>
+        <div class="brand">бабки бабки</div>
+        <div class="brand-sub">учёт доходов и расходов</div>
+      </div>
+      <div class="login-card">
+        <div style="font-size:13.5px; color:var(--ink-soft);">Войди по email — пришлём ссылку, вход без пароля.</div>
+        <input type="email" id="login-email" placeholder="you@example.com" required>
+        <button class="btn-primary" id="login-btn" style="width:100%; text-align:center;">Отправить ссылку</button>
+        <div class="login-msg" id="login-msg"></div>
+      </div>
+    </div>
+  `;
+  document.getElementById("login-btn").addEventListener("click", ()=>{
+    const email = document.getElementById("login-email").value.trim();
+    if(email) sendMagicLink(email);
+  });
+}
+
+// ---------- render: app ----------
+function render(){
+  const app = document.getElementById("app");
+  const statusLabel = { idle:"", saving:"сохраняю…", saved:"сохранено", error:"ошибка сохранения" }[saveStatus];
+  app.innerHTML = `
+    <header class="topbar">
+      <div>
+        <div class="brand">бабки бабки</div>
+        <div class="brand-sub">учёт доходов и расходов</div>
+      </div>
+      <div class="topbar-right">
+        <div class="save-note ${saveStatus==='error'?'error':''}">${statusLabel}</div>
+        <button class="logout-btn" id="logout-btn">Выйти</button>
+      </div>
+    </header>
+    <nav class="tabs">
+      ${tabBtn("dashboard","Дашборд")}${tabBtn("transactions","Операции")}${tabBtn("cards","Карты")}${tabBtn("settings","Настройки")}
+    </nav>
+    <div class="stack">${renderTab()}</div>
+  `;
+  attachHandlers();
+  const lb = document.getElementById("logout-btn");
+  if(lb) lb.addEventListener("click", logout);
+}
+function tabBtn(key,label){
+  return `<button class="tab ${ui.tab===key?'active':''}" data-tab="${key}">${label}</button>`;
+}
+function renderTab(){
+  if(ui.tab==="dashboard") return renderDashboard();
+  if(ui.tab==="transactions") return renderTransactions();
+  if(ui.tab==="cards") return renderCards();
+  if(ui.tab==="settings") return renderSettings();
+}
+
+function monthSwitcher(){
+  return `
+    <div class="month-switcher">
+      <button data-month-shift="-1" aria-label="предыдущий месяц">‹</button>
+      <div class="month-label">${fmtMonth(ui.month)}</div>
+      <button data-month-shift="1" aria-label="следующий месяц">›</button>
+    </div>`;
+}
+
+function renderDashboard(){
+  const monthTx = state.transactions.filter(t=>monthKey(t.date)===ui.month);
+  const spentFixed = monthTx.filter(t=>t.type==="expense"&&t.category==="fixed").reduce((s,t)=>s+t.amount,0);
+  const spentLifestyle = monthTx.filter(t=>t.type==="expense"&&t.category==="lifestyle").reduce((s,t)=>s+t.amount,0);
+  const totalSavings = state.cards.filter(c=>c.type==="debit").reduce((s,c)=>s+c.balance,0);
+  const totalDebt = state.cards.filter(c=>c.type==="credit").reduce((s,c)=>s+c.balance,0);
+  const net = totalSavings - totalDebt;
+
+  return `
+    ${monthSwitcher()}
+    <div class="grid-3">
+      ${summaryCard("Накопления", fmtMoney(totalSavings), "savings")}
+      ${summaryCard("Долги по картам", fmtMoney(totalDebt), "debt")}
+      ${summaryCard("Чистая позиция", fmtMoney(net), net>=0?"savings":"debt")}
+    </div>
+    <div class="panel">
+      <div class="panel-title">Лимиты месяца</div>
+      ${limitBar("Обязательные", spentFixed, state.limits.fixed, "solid")}
+      ${limitBar("Образ жизни", spentLifestyle, state.limits.lifestyle, "stripe")}
+    </div>
+    <div class="panel">
+      <div class="panel-title">Карты</div>
+      <div class="card-mini-list">
+        ${state.cards.map(c=>`
+          <div class="card-mini">
+            <div>
+              <div class="card-mini-name">${esc(c.name)}</div>
+              <div class="card-mini-type">${c.type==="debit"?"дебетовая":"кредитная"}</div>
+            </div>
+            <div class="card-mini-balance mono ${(c.type==="credit"&&c.balance>0)?"tone-debt":"tone-savings"}">
+              ${fmtMoney(c.type==="credit"?-c.balance:c.balance)}
+            </div>
+          </div>`).join("") || `<div class="empty">Добавьте карты во вкладке «Карты»</div>`}
+      </div>
+    </div>
+  `;
+}
+function summaryCard(label, value, tone){
+  return `<div class="summary-card ${tone}">
+    <div class="summary-label">${label}</div>
+    <div class="summary-value mono tone-${tone}">${value}</div>
+  </div>`;
+}
+function limitBar(label, spent, limit, pattern){
+  const pct = limit>0 ? Math.min(100,(spent/limit)*100) : 0;
+  const over = spent>limit;
+  return `<div class="limit-row">
+    <div class="limit-head">
+      <span class="limit-label"><span class="swatch swatch-${pattern}"></span>${label}</span>
+      <span class="mono limit-figures">${fmtMoney(spent)} <span class="limit-of">из ${fmtMoney(limit)}</span></span>
+    </div>
+    <div class="limit-track">
+      <div class="limit-fill fill-${pattern} ${over?'over':''}" style="width:${pct}%"></div>
+      <div class="limit-ticks">${Array.from({length:9}).map(()=> "<span></span>").join("")}</div>
+    </div>
+    ${over?`<div class="limit-warning">превышен на ${fmtMoney(spent-limit)}</div>`:""}
+  </div>`;
+}
+
+function renderTransactions(){
+  const monthTx = state.transactions.filter(t=>monthKey(t.date)===ui.month);
+  const allTags = Array.from(new Set(state.transactions.flatMap(t=>t.tags||[]))).sort();
+  const filtered = ui.activeTag ? monthTx.filter(t=>(t.tags||[]).includes(ui.activeTag)) : monthTx;
+  const sorted = [...filtered].sort((a,b)=> a.date<b.date?1:-1);
+
+  return `
+    ${monthSwitcher()}
+    <form class="panel" id="tx-form">
+      <div class="panel-title">Новая операция</div>
+      <div class="segmented" id="tx-type-toggle">
+        <button type="button" data-type="expense" class="active">Расход</button>
+        <button type="button" data-type="income">Доход</button>
+      </div>
+      <div class="form-row">
+        <label class="field">Сумма<input class="mono" type="number" min="0" step="1" placeholder="0" id="tx-amount" required></label>
+        <label class="field">Дата<input type="date" id="tx-date" value="${todayISO()}"></label>
+      </div>
+      <div class="form-row" id="tx-row2">
+        <label class="field" id="tx-category-wrap">Категория
+          <select id="tx-category">
+            <option value="fixed">Обязательные</option>
+            <option value="lifestyle">Образ жизни</option>
+          </select>
+        </label>
+        <label class="field">Карта
+          <select id="tx-card">
+            ${state.cards.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+      <div class="form-row">
+        <label class="field">Заметка<input type="text" id="tx-note" placeholder="например, продукты"></label>
+        <label class="field">Теги (через запятую)
+          <input type="text" id="tx-tags" list="tag-suggestions" placeholder="аренда, ипотека">
+          <datalist id="tag-suggestions">${allTags.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>
+        </label>
+      </div>
+      <button type="submit" class="btn-primary" ${state.cards.length===0?'disabled':''}>Добавить</button>
+    </form>
+
+    <div class="panel">
+      <div class="panel-title-row">
+        <div class="panel-title">Операции — ${fmtMonth(ui.month)}</div>
+        ${allTags.length ? `<div class="tag-filter">
+          <button class="chip ${!ui.activeTag?'active':''}" data-tag="">все</button>
+          ${allTags.map(t=>`<button class="chip ${ui.activeTag===t?'active':''}" data-tag="${esc(t)}">#${esc(t)}</button>`).join("")}
+        </div>` : ""}
+      </div>
+      <div class="tx-list">
+        ${sorted.map(t=>{
+          const card = state.cards.find(c=>c.id===t.cardId);
+          return `<div class="tx-row">
+            <div class="tx-main">
+              <div class="tx-note">${esc(t.note) || (t.type==="income"?"Доход":catLabel(t.category))}</div>
+              <div class="tx-meta">
+                ${t.date} · ${esc(card?card.name:"—")}
+                ${t.type==="expense" ? `· <span class="swatch swatch-${t.category==='fixed'?'solid':'stripe'}"></span>${catLabel(t.category)}` : ""}
+              </div>
+              ${(t.tags&&t.tags.length) ? `<div class="tx-tags">${t.tags.map(tag=>`<span class="chip static">#${esc(tag)}</span>`).join("")}</div>` : ""}
+            </div>
+            <div class="tx-amount mono ${t.type==='income'?'tone-savings':'tone-debt'}">${t.type==='income'?'+':'−'}${fmtMoney(t.amount).replace('−','')}</div>
+            <button class="tx-delete" data-del-tx="${t.id}" aria-label="удалить">✕</button>
+          </div>`;
+        }).join("") || `<div class="empty">Операций не найдено</div>`}
+      </div>
+    </div>
+  `;
+}
+
+function renderCards(){
+  return `
+    <div class="panel">
+      <div class="panel-title">Карты</div>
+      <div class="card-full-list">
+        ${state.cards.map(c=>`
+          <div class="card-full-row">
+            <input class="card-name-input" value="${esc(c.name)}" data-card-field="name" data-card-id="${c.id}">
+            <select data-card-field="type" data-card-id="${c.id}">
+              <option value="debit" ${c.type==='debit'?'selected':''}>дебетовая</option>
+              <option value="credit" ${c.type==='credit'?'selected':''}>кредитная</option>
+            </select>
+            <div class="balance-edit">
+              <span class="balance-label">${c.type==='credit'?'долг':'баланс'}</span>
+              <input class="mono" type="number" value="${c.balance}" data-card-field="balance" data-card-id="${c.id}">
+            </div>
+            <button class="tx-delete" data-del-card="${c.id}" aria-label="удалить карту">✕</button>
+          </div>`).join("") || `<div class="empty">Карт пока нет</div>`}
+      </div>
+    </div>
+    <form class="panel" id="card-form">
+      <div class="panel-title">Добавить карту</div>
+      <div class="form-row">
+        <label class="field">Название<input type="text" id="card-name" placeholder="например, Tinkoff Black" required></label>
+        <label class="field">Тип
+          <select id="card-type">
+            <option value="debit">дебетовая</option>
+            <option value="credit">кредитная</option>
+          </select>
+        </label>
+      </div>
+      <label class="field">Начальный баланс/долг<input class="mono" type="number" id="card-balance" placeholder="0"></label>
+      <button type="submit" class="btn-primary">Добавить карту</button>
+    </form>
+  `;
+}
+
+function renderSettings(){
+  return `
+    <form class="panel" id="settings-form">
+      <div class="panel-title">Месячные лимиты</div>
+      <div class="form-row">
+        <label class="field">Обязательные<input class="mono" type="number" min="0" id="limit-fixed" value="${state.limits.fixed}"></label>
+        <label class="field">Образ жизни<input class="mono" type="number" min="0" id="limit-lifestyle" value="${state.limits.lifestyle}"></label>
+      </div>
+      <label class="field">Валюта
+        <select id="currency-select">
+          ${["₽","€","$","₸"].map(c=>`<option value="${c}" ${state.currency===c?'selected':''}>${c}</option>`).join("")}
+        </select>
+      </label>
+      <button type="submit" class="btn-primary">Сохранить</button>
+    </form>
+    <div class="panel">
+      <div class="panel-title">О приложении</div>
+      <p class="about-text">
+        Данные хранятся в твоей базе Supabase и привязаны к аккаунту (${esc(session?.user?.email || "")}).
+        Открывая сайт с любого устройства под этим email — увидишь одни и те же записи.
+      </p>
+    </div>
+  `;
+}
+
+// ---------- event wiring ----------
+function attachHandlers(){
+  document.querySelectorAll("[data-tab]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ui.tab = el.dataset.tab; render(); });
+  });
+
+  document.querySelectorAll("[data-month-shift]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ui.month = shiftMonth(ui.month, Number(el.dataset.monthShift)); render(); });
+  });
+
+  const txForm = document.getElementById("tx-form");
+  if(txForm){
+    let txType = "expense";
+    const toggle = document.getElementById("tx-type-toggle");
+    toggle.querySelectorAll("button").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        txType = btn.dataset.type;
+        toggle.querySelectorAll("button").forEach(b=>b.classList.toggle("active", b===btn));
+        document.getElementById("tx-category-wrap").style.display = txType==="expense" ? "" : "none";
+      });
+    });
+    txForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const amount = Number(document.getElementById("tx-amount").value);
+      const cardId = document.getElementById("tx-card").value;
+      if(!amount || amount<=0 || !cardId) return;
+      await addTransaction({
+        type: txType,
+        category: txType==="expense" ? document.getElementById("tx-category").value : null,
+        amount,
+        cardId,
+        date: document.getElementById("tx-date").value || todayISO(),
+        note: document.getElementById("tx-note").value.trim(),
+        tags: parseTags(document.getElementById("tx-tags").value),
+      });
+    });
+  }
+  document.querySelectorAll("[data-del-tx]").forEach(el=>{
+    el.addEventListener("click", ()=> deleteTransaction(el.dataset.delTx));
+  });
+  document.querySelectorAll("[data-tag]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ui.activeTag = el.dataset.tag || null; render(); });
+  });
+
+  document.querySelectorAll("[data-card-field]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      const id = el.dataset.cardId, field = el.dataset.cardField;
+      let value = el.value;
+      if(field==="balance") value = Number(value)||0;
+      updateCardField(id, field, value);
+    });
+  });
+  document.querySelectorAll("[data-del-card]").forEach(el=>{
+    el.addEventListener("click", ()=> deleteCard(el.dataset.delCard));
+  });
+  const cardForm = document.getElementById("card-form");
+  if(cardForm){
+    cardForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const name = document.getElementById("card-name").value.trim();
+      if(!name) return;
+      await addCard({
+        name,
+        type: document.getElementById("card-type").value,
+        balance: Number(document.getElementById("card-balance").value)||0,
+      });
+    });
+  }
+
+  const settingsForm = document.getElementById("settings-form");
+  if(settingsForm){
+    settingsForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      await setLimits(
+        Number(document.getElementById("limit-fixed").value)||0,
+        Number(document.getElementById("limit-lifestyle").value)||0
+      );
+      await setCurrency(document.getElementById("currency-select").value);
+    });
+  }
+}
+
+init();
+</script>
+</body>
+</html>
