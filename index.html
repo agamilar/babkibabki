@@ -11,7 +11,7 @@
 
   :root{
     --bg:#F1F1EE; --surface:#FFFFFF; --ink:#17181B; --ink-soft:#6E7075; --ink-faint:#A6A8AC;
-    --line:#E1E2DF; --savings:#1E7A4C; --debt:#B23B3B;
+    --line:#E1E2DF; --savings:#1E7A4C; --savings-soft:#DCEEE1; --debt:#B23B3B; --debt-soft:#F3DCDA;
     --font-display:'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
     --font-body:'Inter', ui-sans-serif, system-ui, sans-serif;
     --font-mono:'JetBrains Mono', ui-monospace, monospace;
@@ -26,9 +26,9 @@
   .topbar-right{ display:flex; align-items:center; gap:10px; }
   .save-note{ font-size:11px; color:var(--ink-faint); }
   .save-note.error{ color:var(--debt); }
-  .logout-btn{ font-size:11px; color:var(--ink-soft); background:none; border:1px solid var(--line); border-radius:20px; padding:4px 10px; cursor:pointer; }
+  .logout-btn{ font-size:11px; color:var(--ink-soft); background:none; border:1.5px solid var(--line); border-radius:20px; padding:4px 10px; cursor:pointer; }
 
-  .tabs{ display:flex; gap:4px; margin-bottom:22px; border-bottom:1px solid var(--line); }
+  .tabs{ display:flex; gap:4px; margin-bottom:22px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
   .tab{ font-family:var(--font-body); font-size:13.5px; color:var(--ink-soft); background:none; border:none;
         padding:9px 12px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
   .tab.active{ color:var(--ink); border-bottom-color:var(--ink); font-weight:600; }
@@ -36,18 +36,24 @@
   .stack{ display:flex; flex-direction:column; gap:16px; }
 
   .month-switcher{ display:flex; align-items:center; justify-content:center; gap:18px; }
-  .month-switcher button{ background:var(--surface); border:1px solid var(--line); border-radius:8px; width:30px; height:30px;
+  .month-switcher button{ background:var(--surface); border:1.5px solid var(--line); border-radius:8px; width:30px; height:30px;
         font-size:16px; color:var(--ink); cursor:pointer; }
   .month-label{ font-family:var(--font-display); font-size:14.5px; font-weight:600; text-transform:capitalize; min-width:130px; text-align:center; }
 
   .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-  .summary-card{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 12px; border-top:3px solid var(--line); }
-  .summary-card.savings{ border-top-color:var(--savings); }
-  .summary-card.debt{ border-top-color:var(--debt); }
+  .grid-2{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .summary-card{ background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:14px 12px; }
+  .summary-card.savings{ border-color:var(--savings); }
+  .summary-card.debt{ border-color:var(--debt); }
   .summary-label{ font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; }
   .summary-value{ font-size:16px; font-weight:600; }
+  .summary-sub{ font-size:10.5px; color:var(--ink-faint); margin-top:4px; }
 
-  .panel{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  .no-debt-strip{ display:flex; align-items:center; justify-content:space-between; background:var(--savings-soft); border:1.5px solid var(--savings); border-radius:12px; padding:12px 16px; }
+  .no-debt-strip .label{ font-size:13px; font-weight:600; color:var(--savings); }
+  .no-debt-strip .days{ font-family:var(--font-mono); font-size:13px; color:var(--savings); }
+
+  .panel{ background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:18px; }
   .panel-title{ font-family:var(--font-display); font-size:14.5px; font-weight:600; margin-bottom:14px; }
   .panel-title-row{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
   .panel-title-row .panel-title{ margin-bottom:0; }
@@ -69,12 +75,14 @@
   .limit-ticks{ position:absolute; inset:0; display:flex; justify-content:space-between; padding:0 1px; pointer-events:none; }
   .limit-ticks span{ width:1px; background:rgba(255,255,255,0.6); }
   .limit-warning{ font-size:11px; margin-top:5px; color:var(--debt); }
+  .limit-note{ font-size:10.5px; margin-top:5px; color:var(--ink-faint); }
 
   .card-mini-list{ display:flex; flex-direction:column; gap:10px; }
   .card-mini{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--bg); border-radius:10px; }
   .card-mini-name{ font-size:13.5px; font-weight:500; }
   .card-mini-type{ font-size:11px; color:var(--ink-soft); }
   .card-mini-balance{ font-size:14px; font-weight:600; }
+  .card-mini-nodebt{ font-size:11.5px; font-weight:600; color:var(--savings); }
 
   .tone-savings{ color:var(--savings); }
   .tone-debt{ color:var(--debt); }
@@ -82,10 +90,11 @@
 
   form.panel{ display:flex; flex-direction:column; gap:12px; }
   .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .form-row-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
   .field{ display:flex; flex-direction:column; gap:5px; font-size:12px; color:var(--ink-soft); }
   .field input, .field select{
     font-family:var(--font-body); font-size:14px; color:var(--ink); background:var(--bg);
-    border:1px solid var(--line); border-radius:8px; padding:9px 10px; outline:none; width:100%;
+    border:1.5px solid var(--line); border-radius:8px; padding:9px 10px; outline:none; width:100%;
   }
   .field input:focus, .field select:focus{ border-color:var(--ink-faint); }
 
@@ -96,10 +105,12 @@
   .btn-primary{ align-self:flex-start; background:var(--ink); color:var(--bg); border:none; border-radius:8px;
         padding:10px 18px; font-size:13.5px; font-weight:600; cursor:pointer; }
   .btn-primary:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn-secondary{ align-self:flex-start; background:none; color:var(--ink-soft); border:1.5px solid var(--line); border-radius:8px;
+        padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer; }
 
   .tag-filter{ display:flex; gap:6px; flex-wrap:wrap; }
   .chip{ font-family:var(--font-body); font-size:11px; color:var(--ink-soft); background:var(--bg);
-         border:1px solid var(--line); border-radius:20px; padding:4px 10px; cursor:pointer; }
+         border:1.5px solid var(--line); border-radius:20px; padding:4px 10px; cursor:pointer; }
   .chip.active{ background:var(--ink); color:var(--bg); border-color:var(--ink); }
   .chip.static{ cursor:default; }
 
@@ -115,27 +126,46 @@
   .tx-delete:hover{ color:var(--debt); }
 
   .card-full-list{ display:flex; flex-direction:column; gap:10px; }
-  .card-full-row{ display:grid; grid-template-columns:1.4fr 1fr 1.2fr auto; gap:8px; align-items:center; }
-  .card-full-row select{ font-family:var(--font-body); font-size:13px; border:1px solid var(--line); border-radius:8px; padding:8px; background:var(--bg); }
-  .card-name-input{ font-family:var(--font-body); font-size:13.5px; font-weight:500; border:1px solid var(--line); border-radius:8px; padding:8px 9px; background:var(--bg); width:100%; }
+  .card-full-row{ display:grid; grid-template-columns:1.3fr .9fr .8fr 1fr auto; gap:8px; align-items:center; }
+  .card-full-row select{ font-family:var(--font-body); font-size:13px; border:1.5px solid var(--line); border-radius:8px; padding:8px; background:var(--bg); width:100%; }
+  .card-name-input{ font-family:var(--font-body); font-size:13.5px; font-weight:500; border:1.5px solid var(--line); border-radius:8px; padding:8px 9px; background:var(--bg); width:100%; }
   .balance-edit{ display:flex; align-items:center; gap:6px; }
-  .balance-edit input{ font-size:13px; border:1px solid var(--line); border-radius:8px; padding:8px; background:var(--bg); width:100%; }
+  .balance-edit input{ font-size:13px; border:1.5px solid var(--line); border-radius:8px; padding:8px; background:var(--bg); width:100%; }
   .balance-label{ font-size:10.5px; color:var(--ink-soft); white-space:nowrap; }
+
+  .goal-list{ display:flex; flex-direction:column; gap:14px; }
+  .goal-card{ background:var(--bg); border:1.5px solid var(--savings); border-radius:12px; padding:14px; }
+  .goal-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+  .goal-name{ font-size:13.5px; font-weight:600; }
+  .goal-track{ height:8px; background:var(--surface); border-radius:5px; overflow:hidden; margin-bottom:8px; }
+  .goal-fill{ height:100%; background:var(--savings); border-radius:5px; transition:width .3s ease; }
+  .goal-figures{ font-size:11.5px; color:var(--ink-soft); }
+  .goal-row-actions{ display:flex; gap:8px; align-items:center; }
+  .goal-row-actions input{ font-family:var(--font-mono); font-size:12.5px; border:1.5px solid var(--line); border-radius:8px; padding:6px 8px; background:var(--surface); width:120px; }
+  .goal-row-actions button{ font-size:11px; }
 
   .about-text{ font-size:12.5px; line-height:1.6; color:var(--ink-soft); margin:0; }
   .empty{ font-size:12.5px; color:var(--ink-soft); text-align:center; padding:14px 0; }
 
-  /* login screen */
+  .currency-table{ display:flex; flex-direction:column; gap:8px; }
+  .currency-row{ display:grid; grid-template-columns:auto 1fr auto auto; gap:8px; align-items:center; font-size:13px; }
+  .currency-row input{ font-family:var(--font-mono); font-size:12.5px; border:1.5px solid var(--line); border-radius:8px; padding:6px 8px; background:var(--bg); width:100px; }
+  .currency-code{ font-family:var(--font-mono); font-weight:600; font-size:12.5px; }
+  .currency-base-tag{ font-size:10.5px; color:var(--ink-faint); }
+  .currency-del{ background:none; border:none; color:var(--ink-faint); cursor:pointer; font-size:12px; }
+  .currency-del:hover{ color:var(--debt); }
+
   .login-wrap{ min-height:70vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:18px; }
-  .login-card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:28px; max-width:340px; width:100%; }
-  .login-card input{ font-family:var(--font-body); font-size:14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; width:100%; margin:14px 0; outline:none; background:var(--bg); }
+  .login-card{ background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:28px; max-width:340px; width:100%; }
+  .login-card input{ font-family:var(--font-body); font-size:14px; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; width:100%; margin:14px 0; outline:none; background:var(--bg); }
   .login-msg{ font-size:12px; color:var(--ink-soft); margin-top:10px; }
   .login-msg.error{ color:var(--debt); }
 
   @media (max-width:480px){
-    .grid-3{ grid-template-columns:1fr; }
-    .form-row{ grid-template-columns:1fr; }
+    .grid-3, .grid-2{ grid-template-columns:1fr; }
+    .form-row, .form-row-3{ grid-template-columns:1fr; }
     .card-full-row{ grid-template-columns:1fr; }
+    .currency-row{ grid-template-columns:1fr; }
   }
 </style>
 </head>
@@ -146,25 +176,34 @@
 "use strict";
 
 // ====== НАСТРОЙ ЭТИ ДВЕ СТРОКИ ПОСЛЕ СОЗДАНИЯ ПРОЕКТА В SUPABASE ======
-const SUPABASE_URL = "https://_.supabase.co";
-const SUPABASE_ANON_KEY = "_";
+const SUPABASE_URL = "https://jjakzfcysqwqptuoqzmj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_gRAQcVU0QYgnTfYXiB1jTw_UxkRIAe8";
 // =======================================================================
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const DEFAULT_STATE = {
-  currency: "₽",
+  baseCurrency: "RUB",
+  currencies: [
+    { code:"RUB", symbol:"₽" },
+    { code:"EUR", symbol:"€" },
+    { code:"USD", symbol:"$" },
+    { code:"KZT", symbol:"₸" },
+  ],
+  rates: {},
   limits: { fixed: 60000, lifestyle: 40000 },
   cards: [
-    { id: uid(), name: "Дебетовая", type: "debit", balance: 0 },
-    { id: uid(), name: "Кредитная", type: "credit", balance: 0 },
+    { id: uid(), name: "Дебетовая", type: "debit", balance: 0, currency: "RUB", debtZeroSince: null },
+    { id: uid(), name: "Кредитная", type: "credit", balance: 0, currency: "RUB", debtZeroSince: null },
   ],
+  goals: [],
   transactions: [],
+  debtZeroSince: null,
 };
 
 let session = null;
 let state = null;
-let saveStatus = "idle"; // idle | saving | saved | error
+let saveStatus = "idle";
 let ui = { tab: "dashboard", month: monthKey(todayISO()), activeTag: null };
 
 // ---------- helpers ----------
@@ -173,11 +212,12 @@ function todayISO(){ return new Date().toISOString().slice(0,10); }
 function monthKey(iso){ return iso.slice(0,7); }
 const MONTHS_RU = ["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
 function fmtMonth(key){ const [y,m]=key.split("-").map(Number); return MONTHS_RU[m-1]+" "+y; }
-function fmtMoney(n, currency){
-  currency = currency || (state && state.currency) || "₽";
+function currencySymbol(code){ const c = state.currencies.find(c=>c.code===code); return c ? c.symbol : code; }
+function fmtMoney(n, code){
+  code = code || state.baseCurrency;
   const neg = n < 0;
   const v = Math.abs(Math.round(n)).toLocaleString("ru-RU");
-  return (neg?"−":"") + v + " " + currency;
+  return (neg?"−":"") + v + " " + currencySymbol(code);
 }
 function shiftMonth(key, delta){
   const [y,m]=key.split("-").map(Number);
@@ -191,6 +231,37 @@ function esc(s){
   return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 function catLabel(cat){ return cat === "fixed" ? "Обязательные" : "Образ жизни"; }
+function convertToBase(amount, code){
+  if(code === state.baseCurrency) return amount;
+  const r = state.rates[code];
+  return (r != null && r !== "") ? amount * Number(r) : null;
+}
+function daysSince(iso){
+  if(!iso) return 0;
+  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
+}
+
+// ---------- streak bookkeeping ----------
+function touchCardStreak(card){
+  if(card.type !== "credit"){ card.debtZeroSince = null; return; }
+  if(card.balance <= 0.0001){
+    if(!card.debtZeroSince) card.debtZeroSince = new Date().toISOString();
+  } else {
+    card.debtZeroSince = null;
+  }
+}
+function recomputeGlobalStreak(){
+  const hasDebt = state.cards.some(c => c.type === "credit" && c.balance > 0.0001);
+  if(!hasDebt){
+    if(!state.debtZeroSince) state.debtZeroSince = new Date().toISOString();
+  } else {
+    state.debtZeroSince = null;
+  }
+}
+function normalizeCards(){
+  state.cards.forEach(touchCardStreak);
+  recomputeGlobalStreak();
+}
 
 // ---------- auth ----------
 async function init(){
@@ -199,58 +270,42 @@ async function init(){
   sb.auth.onAuthStateChange((_event, s) => { session = s; boot(); });
   await boot();
 }
-
 async function boot(){
   if(!session){ state = null; renderLogin(); return; }
   if(!state){ await loadState(); }
   render();
 }
-
 async function sendMagicLink(email){
   const el = document.getElementById("login-msg");
   el.textContent = "Отправляю…";
   el.className = "login-msg";
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href }
-  });
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
   if(error){ el.textContent = "Ошибка: " + error.message; el.className = "login-msg error"; }
   else { el.textContent = "Ссылка отправлена на почту — перейди по ней с любого устройства."; }
 }
-
-async function logout(){
-  await sb.auth.signOut();
-  state = null;
-}
+async function logout(){ await sb.auth.signOut(); state = null; }
 
 // ---------- data ----------
 async function loadState(){
-  const { data, error } = await sb
-    .from("budget_state")
-    .select("data")
-    .eq("user_id", session.user.id)
-    .maybeSingle();
+  const { data, error } = await sb.from("budget_state").select("data").eq("user_id", session.user.id).maybeSingle();
   if(error){ console.error(error); }
-  if(data && data.data){ state = data.data; }
-  else{
+  if(data && data.data){
+    state = { ...structuredClone(DEFAULT_STATE), ...data.data };
+  } else {
     state = structuredClone(DEFAULT_STATE);
     await persist();
   }
 }
-
 async function persist(){
+  normalizeCards();
   saveStatus = "saving"; render();
   try{
     const { error } = await sb.from("budget_state").upsert({
-      user_id: session.user.id,
-      data: state,
-      updated_at: new Date().toISOString(),
+      user_id: session.user.id, data: state, updated_at: new Date().toISOString(),
     });
     saveStatus = error ? "error" : "saved";
     if(error) console.error(error);
-  }catch(e){
-    saveStatus = "error"; console.error(e);
-  }
+  }catch(e){ saveStatus = "error"; console.error(e); }
   render();
 }
 
@@ -275,7 +330,7 @@ async function deleteTransaction(id){
   await persist();
 }
 async function addCard(card){
-  state.cards.push({ ...card, id: uid() });
+  state.cards.push({ ...card, id: uid(), debtZeroSince: null });
   await persist();
 }
 async function updateCardField(id, field, value){
@@ -287,13 +342,36 @@ async function deleteCard(id){
   state.transactions = state.transactions.filter(t=>t.cardId!==id);
   await persist();
 }
-async function setLimits(fixed, lifestyle){
-  state.limits = { fixed, lifestyle };
+async function setLimits(fixed, lifestyle){ state.limits = { fixed, lifestyle }; await persist(); }
+async function setBaseCurrency(code){ state.baseCurrency = code; await persist(); }
+async function setRate(code, value){ state.rates = { ...state.rates, [code]: value }; await persist(); }
+async function addCurrency(code, symbol){
+  code = code.trim().toUpperCase();
+  if(!code || state.currencies.some(c=>c.code===code)) return;
+  state.currencies.push({ code, symbol: symbol.trim() || code });
   await persist();
 }
-async function setCurrency(cur){
-  state.currency = cur;
+async function removeCurrency(code){
+  const used = state.cards.some(c=>c.currency===code) || state.goals.some(g=>g.currency===code) || code === state.baseCurrency;
+  if(used) return;
+  state.currencies = state.currencies.filter(c=>c.code!==code);
+  const { [code]:_, ...rest } = state.rates;
+  state.rates = rest;
   await persist();
+}
+async function addGoal(goal){ state.goals.push({ ...goal, id: uid() }); await persist(); }
+async function updateGoalSaved(id, value){
+  state.goals = state.goals.map(g=>g.id===id ? {...g, savedAmount: value} : g);
+  await persist();
+}
+async function deleteGoal(id){ state.goals = state.goals.filter(g=>g.id!==id); await persist(); }
+
+// ---------- sorting ----------
+function sortedCards(){
+  const debit = state.cards.filter(c=>c.type==="debit");
+  const creditActive = state.cards.filter(c=>c.type==="credit" && c.balance>0.0001).sort((a,b)=>b.balance-a.balance);
+  const creditZero = state.cards.filter(c=>c.type==="credit" && c.balance<=0.0001);
+  return [...debit, ...creditActive, ...creditZero];
 }
 
 // ---------- render: login ----------
@@ -335,7 +413,7 @@ function render(){
       </div>
     </header>
     <nav class="tabs">
-      ${tabBtn("dashboard","Дашборд")}${tabBtn("transactions","Операции")}${tabBtn("cards","Карты")}${tabBtn("settings","Настройки")}
+      ${tabBtn("dashboard","Дашборд")}${tabBtn("transactions","Операции")}${tabBtn("cards","Карты")}${tabBtn("goals","Цели")}${tabBtn("settings","Настройки")}
     </nav>
     <div class="stack">${renderTab()}</div>
   `;
@@ -343,13 +421,12 @@ function render(){
   const lb = document.getElementById("logout-btn");
   if(lb) lb.addEventListener("click", logout);
 }
-function tabBtn(key,label){
-  return `<button class="tab ${ui.tab===key?'active':''}" data-tab="${key}">${label}</button>`;
-}
+function tabBtn(key,label){ return `<button class="tab ${ui.tab===key?'active':''}" data-tab="${key}">${label}</button>`; }
 function renderTab(){
   if(ui.tab==="dashboard") return renderDashboard();
   if(ui.tab==="transactions") return renderTransactions();
   if(ui.tab==="cards") return renderCards();
+  if(ui.tab==="goals") return renderGoals();
   if(ui.tab==="settings") return renderSettings();
 }
 
@@ -362,50 +439,99 @@ function monthSwitcher(){
     </div>`;
 }
 
+function groupByCurrency(cards, filterFn){
+  const map = {};
+  cards.filter(filterFn).forEach(c=>{ map[c.currency] = (map[c.currency]||0) + c.balance; });
+  return map;
+}
+function sumConverted(map){
+  let sum = 0; const missing = [];
+  Object.entries(map).forEach(([code, amt])=>{
+    if(Math.abs(amt) < 0.0001) return;
+    const v = convertToBase(amt, code);
+    if(v == null) missing.push(code); else sum += v;
+  });
+  return { sum, missing };
+}
+function currencyLines(map){
+  return Object.entries(map).filter(([,amt])=>Math.abs(amt)>0.0001)
+    .map(([code,amt])=> fmtMoney(amt, code)).join(" · ") || fmtMoney(0);
+}
+
 function renderDashboard(){
   const monthTx = state.transactions.filter(t=>monthKey(t.date)===ui.month);
-  const spentFixed = monthTx.filter(t=>t.type==="expense"&&t.category==="fixed").reduce((s,t)=>s+t.amount,0);
-  const spentLifestyle = monthTx.filter(t=>t.type==="expense"&&t.category==="lifestyle").reduce((s,t)=>s+t.amount,0);
-  const totalSavings = state.cards.filter(c=>c.type==="debit").reduce((s,c)=>s+c.balance,0);
-  const totalDebt = state.cards.filter(c=>c.type==="credit").reduce((s,c)=>s+c.balance,0);
-  const net = totalSavings - totalDebt;
+  const spentFixedInfo = sumExpensesConverted(monthTx, "fixed");
+  const spentLifestyleInfo = sumExpensesConverted(monthTx, "lifestyle");
+
+  const savingsMap = groupByCurrency(state.cards, c=>c.type==="debit");
+  const debtMap = groupByCurrency(state.cards, c=>c.type==="credit");
+  const savingsConv = sumConverted(savingsMap);
+  const debtConv = sumConverted(debtMap);
+  const hasDebt = Object.values(debtMap).some(v=>v>0.0001);
+  const missingAll = Array.from(new Set([...savingsConv.missing, ...debtConv.missing]));
+  const netWorth = savingsConv.sum - debtConv.sum;
 
   return `
     ${monthSwitcher()}
-    <div class="grid-3">
-      ${summaryCard("Накопления", fmtMoney(totalSavings), "savings")}
-      ${summaryCard("Долги по картам", fmtMoney(totalDebt), "debt")}
-      ${summaryCard("Чистая позиция", fmtMoney(net), net>=0?"savings":"debt")}
+    <div class="${hasDebt ? 'grid-3' : 'grid-2'}">
+      <div class="summary-card savings">
+        <div class="summary-label">Накопления</div>
+        <div class="summary-value mono tone-savings">${currencyLines(savingsMap)}</div>
+        ${Object.keys(savingsMap).length>1 && savingsConv.missing.length===0 ? `<div class="summary-sub mono">≈ ${fmtMoney(savingsConv.sum)}</div>` : ""}
+      </div>
+      ${hasDebt ? `
+      <div class="summary-card debt">
+        <div class="summary-label">Долги по картам</div>
+        <div class="summary-value mono tone-debt">${currencyLines(debtMap)}</div>
+        ${Object.keys(debtMap).length>1 && debtConv.missing.length===0 ? `<div class="summary-sub mono">≈ ${fmtMoney(debtConv.sum)}</div>` : ""}
+      </div>` : ""}
+      <div class="summary-card ${netWorth>=0?'savings':'debt'}">
+        <div class="summary-label">Капитал (в ${state.baseCurrency})</div>
+        <div class="summary-value mono ${netWorth>=0?'tone-savings':'tone-debt'}">${fmtMoney(netWorth)}</div>
+        ${missingAll.length ? `<div class="summary-sub">не учтено: ${missingAll.join(", ")} — укажи курс в настройках</div>` : ""}
+      </div>
     </div>
+
+    ${!hasDebt ? `
+    <div class="no-debt-strip">
+      <span class="label">🎉 долгов по кредиткам нет</span>
+      <span class="days">${daysSince(state.debtZeroSince)} дн. подряд</span>
+    </div>` : ""}
+
     <div class="panel">
-      <div class="panel-title">Лимиты месяца</div>
-      ${limitBar("Обязательные", spentFixed, state.limits.fixed, "solid")}
-      ${limitBar("Образ жизни", spentLifestyle, state.limits.lifestyle, "stripe")}
+      <div class="panel-title">Лимиты месяца (в ${state.baseCurrency})</div>
+      ${limitBar("Обязательные", spentFixedInfo, state.limits.fixed, "solid")}
+      ${limitBar("Образ жизни", spentLifestyleInfo, state.limits.lifestyle, "stripe")}
     </div>
+
     <div class="panel">
       <div class="panel-title">Карты</div>
       <div class="card-mini-list">
-        ${state.cards.map(c=>`
+        ${sortedCards().map(c=>`
           <div class="card-mini">
             <div>
               <div class="card-mini-name">${esc(c.name)}</div>
-              <div class="card-mini-type">${c.type==="debit"?"дебетовая":"кредитная"}</div>
+              <div class="card-mini-type">${c.type==="debit"?"дебетовая":"кредитная"} · ${c.currency}</div>
             </div>
-            <div class="card-mini-balance mono ${(c.type==="credit"&&c.balance>0)?"tone-debt":"tone-savings"}">
-              ${fmtMoney(c.type==="credit"?-c.balance:c.balance)}
-            </div>
+            ${(c.type==="credit" && c.balance<=0.0001)
+              ? `<div class="card-mini-nodebt">без долга · ${daysSince(c.debtZeroSince)} дн.</div>`
+              : `<div class="card-mini-balance mono ${(c.type==="credit"&&c.balance>0)?"tone-debt":"tone-savings"}">${fmtMoney(c.type==="credit"?-c.balance:c.balance, c.currency)}</div>`}
           </div>`).join("") || `<div class="empty">Добавьте карты во вкладке «Карты»</div>`}
       </div>
     </div>
   `;
 }
-function summaryCard(label, value, tone){
-  return `<div class="summary-card ${tone}">
-    <div class="summary-label">${label}</div>
-    <div class="summary-value mono tone-${tone}">${value}</div>
-  </div>`;
+
+function sumExpensesConverted(monthTx, category){
+  let sum = 0; const missing = new Set();
+  monthTx.filter(t=>t.type==="expense" && t.category===category).forEach(t=>{
+    const v = convertToBase(t.amount, t.currency || state.baseCurrency);
+    if(v == null) missing.add(t.currency); else sum += v;
+  });
+  return { sum, missing: Array.from(missing) };
 }
-function limitBar(label, spent, limit, pattern){
+function limitBar(label, spentInfo, limit, pattern){
+  const spent = spentInfo.sum;
   const pct = limit>0 ? Math.min(100,(spent/limit)*100) : 0;
   const over = spent>limit;
   return `<div class="limit-row">
@@ -418,6 +544,7 @@ function limitBar(label, spent, limit, pattern){
       <div class="limit-ticks">${Array.from({length:9}).map(()=> "<span></span>").join("")}</div>
     </div>
     ${over?`<div class="limit-warning">превышен на ${fmtMoney(spent-limit)}</div>`:""}
+    ${spentInfo.missing.length?`<div class="limit-note">не учтено (${spentInfo.missing.join(", ")}) — укажи курс в настройках</div>`:""}
   </div>`;
 }
 
@@ -439,7 +566,7 @@ function renderTransactions(){
         <label class="field">Сумма<input class="mono" type="number" min="0" step="1" placeholder="0" id="tx-amount" required></label>
         <label class="field">Дата<input type="date" id="tx-date" value="${todayISO()}"></label>
       </div>
-      <div class="form-row" id="tx-row2">
+      <div class="form-row">
         <label class="field" id="tx-category-wrap">Категория
           <select id="tx-category">
             <option value="fixed">Обязательные</option>
@@ -448,7 +575,7 @@ function renderTransactions(){
         </label>
         <label class="field">Карта
           <select id="tx-card">
-            ${state.cards.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}
+            ${state.cards.map(c=>`<option value="${c.id}" data-currency="${c.currency}">${esc(c.name)} · ${c.currency}</option>`).join("")}
           </select>
         </label>
       </div>
@@ -482,7 +609,7 @@ function renderTransactions(){
               </div>
               ${(t.tags&&t.tags.length) ? `<div class="tx-tags">${t.tags.map(tag=>`<span class="chip static">#${esc(tag)}</span>`).join("")}</div>` : ""}
             </div>
-            <div class="tx-amount mono ${t.type==='income'?'tone-savings':'tone-debt'}">${t.type==='income'?'+':'−'}${fmtMoney(t.amount).replace('−','')}</div>
+            <div class="tx-amount mono ${t.type==='income'?'tone-savings':'tone-debt'}">${t.type==='income'?'+':'−'}${fmtMoney(t.amount, t.currency).replace('−','')}</div>
             <button class="tx-delete" data-del-tx="${t.id}" aria-label="удалить">✕</button>
           </div>`;
         }).join("") || `<div class="empty">Операций не найдено</div>`}
@@ -496,12 +623,15 @@ function renderCards(){
     <div class="panel">
       <div class="panel-title">Карты</div>
       <div class="card-full-list">
-        ${state.cards.map(c=>`
+        ${sortedCards().map(c=>`
           <div class="card-full-row">
             <input class="card-name-input" value="${esc(c.name)}" data-card-field="name" data-card-id="${c.id}">
             <select data-card-field="type" data-card-id="${c.id}">
               <option value="debit" ${c.type==='debit'?'selected':''}>дебетовая</option>
               <option value="credit" ${c.type==='credit'?'selected':''}>кредитная</option>
+            </select>
+            <select data-card-field="currency" data-card-id="${c.id}">
+              ${state.currencies.map(cur=>`<option value="${cur.code}" ${c.currency===cur.code?'selected':''}>${cur.code}</option>`).join("")}
             </select>
             <div class="balance-edit">
               <span class="balance-label">${c.type==='credit'?'долг':'баланс'}</span>
@@ -513,12 +643,17 @@ function renderCards(){
     </div>
     <form class="panel" id="card-form">
       <div class="panel-title">Добавить карту</div>
-      <div class="form-row">
+      <div class="form-row-3">
         <label class="field">Название<input type="text" id="card-name" placeholder="например, Tinkoff Black" required></label>
         <label class="field">Тип
           <select id="card-type">
             <option value="debit">дебетовая</option>
             <option value="credit">кредитная</option>
+          </select>
+        </label>
+        <label class="field">Валюта
+          <select id="card-currency">
+            ${state.currencies.map(cur=>`<option value="${cur.code}">${cur.code}</option>`).join("")}
           </select>
         </label>
       </div>
@@ -528,26 +663,84 @@ function renderCards(){
   `;
 }
 
+function renderGoals(){
+  return `
+    <div class="panel">
+      <div class="panel-title">Финансовые цели</div>
+      <div class="goal-list">
+        ${state.goals.map(g=>{
+          const pct = g.targetAmount>0 ? Math.min(100,(g.savedAmount/g.targetAmount)*100) : 0;
+          return `<div class="goal-card">
+            <div class="goal-head">
+              <div class="goal-name">${esc(g.name)}</div>
+              <button class="tx-delete" data-del-goal="${g.id}" aria-label="удалить цель">✕</button>
+            </div>
+            <div class="goal-track"><div class="goal-fill" style="width:${pct}%"></div></div>
+            <div class="goal-figures mono">${fmtMoney(g.savedAmount, g.currency)} из ${fmtMoney(g.targetAmount, g.currency)} · ${Math.round(pct)}%</div>
+            <div class="goal-row-actions" style="margin-top:8px;">
+              <input type="number" class="mono" data-goal-saved="${g.id}" value="${g.savedAmount}">
+              <button class="btn-secondary" data-goal-save-btn="${g.id}" type="button">Обновить</button>
+            </div>
+          </div>`;
+        }).join("") || `<div class="empty">Целей пока нет</div>`}
+      </div>
+    </div>
+    <form class="panel" id="goal-form">
+      <div class="panel-title">Новая цель</div>
+      <label class="field">Название<input type="text" id="goal-name" placeholder="например, подушка безопасности" required></label>
+      <div class="form-row-3">
+        <label class="field">Сумма цели<input class="mono" type="number" min="0" id="goal-target" placeholder="0" required></label>
+        <label class="field">Уже накоплено<input class="mono" type="number" min="0" id="goal-saved" placeholder="0"></label>
+        <label class="field">Валюта
+          <select id="goal-currency">
+            ${state.currencies.map(cur=>`<option value="${cur.code}">${cur.code}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+      <button type="submit" class="btn-primary">Добавить цель</button>
+    </form>
+  `;
+}
+
 function renderSettings(){
   return `
     <form class="panel" id="settings-form">
-      <div class="panel-title">Месячные лимиты</div>
+      <div class="panel-title">Месячные лимиты (в ${state.baseCurrency})</div>
       <div class="form-row">
         <label class="field">Обязательные<input class="mono" type="number" min="0" id="limit-fixed" value="${state.limits.fixed}"></label>
         <label class="field">Образ жизни<input class="mono" type="number" min="0" id="limit-lifestyle" value="${state.limits.lifestyle}"></label>
       </div>
-      <label class="field">Валюта
-        <select id="currency-select">
-          ${["₽","€","$","₸"].map(c=>`<option value="${c}" ${state.currency===c?'selected':''}>${c}</option>`).join("")}
-        </select>
-      </label>
-      <button type="submit" class="btn-primary">Сохранить</button>
+      <button type="submit" class="btn-primary">Сохранить лимиты</button>
     </form>
+
+    <div class="panel">
+      <div class="panel-title">Валюты и курсы</div>
+      <div class="currency-table">
+        ${state.currencies.map(cur=>`
+          <div class="currency-row">
+            <span class="currency-code">${cur.code} <span style="color:var(--ink-faint);">${cur.symbol}</span></span>
+            <span></span>
+            ${cur.code===state.baseCurrency
+              ? `<span class="currency-base-tag">базовая</span>`
+              : `<input type="number" step="0.01" placeholder="курс к ${state.baseCurrency}" data-rate="${cur.code}" value="${state.rates[cur.code] ?? ''}">`}
+            <div style="display:flex; gap:8px; align-items:center;">
+              ${cur.code!==state.baseCurrency ? `<button class="btn-secondary" data-set-base="${cur.code}" type="button">сделать базовой</button>` : ""}
+              <button class="currency-del" data-del-currency="${cur.code}" title="удалить валюту">✕</button>
+            </div>
+          </div>`).join("")}
+      </div>
+      <form id="currency-form" class="form-row" style="margin-top:14px;">
+        <label class="field">Код (например GBP)<input type="text" id="new-cur-code" maxlength="6" placeholder="GBP"></label>
+        <label class="field">Символ<input type="text" id="new-cur-symbol" maxlength="4" placeholder="£"></label>
+        <button type="submit" class="btn-primary" style="grid-column:1 / -1;">Добавить валюту</button>
+      </form>
+    </div>
+
     <div class="panel">
       <div class="panel-title">О приложении</div>
       <p class="about-text">
-        Данные хранятся в твоей базе Supabase и привязаны к аккаунту (${esc(session?.user?.email || "")}).
-        Открывая сайт с любого устройства под этим email — увидишь одни и те же записи.
+        Данные хранятся в твоей базе Supabase, привязаны к аккаунту (${esc(session?.user?.email || "")}).
+        У каждой карты и цели — своя валюта; курсы к базовой валюте задаются вручную в этом разделе.
       </p>
     </div>
   `;
@@ -558,7 +751,6 @@ function attachHandlers(){
   document.querySelectorAll("[data-tab]").forEach(el=>{
     el.addEventListener("click", ()=>{ ui.tab = el.dataset.tab; render(); });
   });
-
   document.querySelectorAll("[data-month-shift]").forEach(el=>{
     el.addEventListener("click", ()=>{ ui.month = shiftMonth(ui.month, Number(el.dataset.monthShift)); render(); });
   });
@@ -577,13 +769,14 @@ function attachHandlers(){
     txForm.addEventListener("submit", async (e)=>{
       e.preventDefault();
       const amount = Number(document.getElementById("tx-amount").value);
-      const cardId = document.getElementById("tx-card").value;
+      const cardSelect = document.getElementById("tx-card");
+      const cardId = cardSelect.value;
+      const currency = cardSelect.selectedOptions[0]?.dataset.currency || state.baseCurrency;
       if(!amount || amount<=0 || !cardId) return;
       await addTransaction({
         type: txType,
         category: txType==="expense" ? document.getElementById("tx-category").value : null,
-        amount,
-        cardId,
+        amount, currency, cardId,
         date: document.getElementById("tx-date").value || todayISO(),
         note: document.getElementById("tx-note").value.trim(),
         tags: parseTags(document.getElementById("tx-tags").value),
@@ -617,7 +810,33 @@ function attachHandlers(){
       await addCard({
         name,
         type: document.getElementById("card-type").value,
+        currency: document.getElementById("card-currency").value,
         balance: Number(document.getElementById("card-balance").value)||0,
+      });
+    });
+  }
+
+  document.querySelectorAll("[data-del-goal]").forEach(el=>{
+    el.addEventListener("click", ()=> deleteGoal(el.dataset.delGoal));
+  });
+  document.querySelectorAll("[data-goal-save-btn]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.goalSaveBtn;
+      const input = document.querySelector(`[data-goal-saved="${id}"]`);
+      updateGoalSaved(id, Number(input.value)||0);
+    });
+  });
+  const goalForm = document.getElementById("goal-form");
+  if(goalForm){
+    goalForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const name = document.getElementById("goal-name").value.trim();
+      const targetAmount = Number(document.getElementById("goal-target").value);
+      if(!name || !targetAmount) return;
+      await addGoal({
+        name, targetAmount,
+        savedAmount: Number(document.getElementById("goal-saved").value)||0,
+        currency: document.getElementById("goal-currency").value,
       });
     });
   }
@@ -630,7 +849,24 @@ function attachHandlers(){
         Number(document.getElementById("limit-fixed").value)||0,
         Number(document.getElementById("limit-lifestyle").value)||0
       );
-      await setCurrency(document.getElementById("currency-select").value);
+    });
+  }
+  document.querySelectorAll("[data-rate]").forEach(el=>{
+    el.addEventListener("change", ()=> setRate(el.dataset.rate, el.value));
+  });
+  document.querySelectorAll("[data-set-base]").forEach(el=>{
+    el.addEventListener("click", ()=> setBaseCurrency(el.dataset.setBase));
+  });
+  document.querySelectorAll("[data-del-currency]").forEach(el=>{
+    el.addEventListener("click", ()=> removeCurrency(el.dataset.delCurrency));
+  });
+  const currencyForm = document.getElementById("currency-form");
+  if(currencyForm){
+    currencyForm.addEventListener("submit", (e)=>{
+      e.preventDefault();
+      const code = document.getElementById("new-cur-code").value;
+      const symbol = document.getElementById("new-cur-symbol").value;
+      if(code) addCurrency(code, symbol);
     });
   }
 }
