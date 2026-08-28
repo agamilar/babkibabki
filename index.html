@@ -149,6 +149,21 @@
 
   .about-text{ font-size:12.5px; line-height:1.6; color:var(--ink-soft); margin:0; }
   .toggle-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+  .tag-total{ font-size:14px; font-weight:600; margin-bottom:10px; }
+  .tag-bars{ display:flex; flex-direction:column; gap:12px; }
+  .tag-bar-row{ display:flex; flex-direction:column; gap:5px; }
+  .tag-bar-head{ display:flex; justify-content:space-between; font-size:13px; }
+  .tag-bar-track{ height:9px; background:var(--bg); border-radius:5px; overflow:hidden; }
+  .tag-bar-fill{ height:100%; background:var(--ink); border-radius:5px; }
+  .tag-bar-fill.untagged{ background:var(--ink-faint); }
+  .cashback-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .cashback-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; background:var(--bg); border-radius:8px; }
+  .cashback-main{ display:flex; align-items:center; gap:10px; }
+  .cashback-category{ font-size:13px; font-weight:500; }
+  .cashback-percent{ font-size:13px; color:var(--savings); font-weight:600; }
+  .cashback-note{ font-size:11px; color:var(--ink-soft); flex:1; }
+  .cashback-add-row{ display:grid; grid-template-columns: 1.4fr .7fr 1.3fr auto; gap:8px; }
+  .cashback-add-row input{ font-family:var(--font-body); font-size:13px; border:1.5px solid var(--line); border-radius:8px; padding:8px; background:var(--bg); width:100%; }
   .toggle-row-text{ font-size:13px; }
   .toggle-row-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
   .switch{ position:relative; width:40px; height:23px; flex:none; }
@@ -178,6 +193,7 @@
     .form-row, .form-row-3{ grid-template-columns:1fr; }
     .card-full-row{ grid-template-columns:1fr; }
     .currency-row{ grid-template-columns:1fr; }
+    .cashback-add-row{ grid-template-columns:1fr; }
   }
 </style>
 </head>
@@ -188,8 +204,8 @@
 "use strict";
 
 // ====== НАСТРОЙ ЭТИ ДВЕ СТРОКИ ПОСЛЕ СОЗДАНИЯ ПРОЕКТА В SUPABASE ======
-const SUPABASE_URL = "https://jjakzfcysqwqptuoqzmj.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_gRAQcVU0QYgnTfYXiB1jTw_UxkRIAe8";
+const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
 // =======================================================================
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -204,9 +220,10 @@ const DEFAULT_STATE = {
   ],
   rates: {},
   limits: { fixed: 60000, lifestyle: 40000 },
+  tagPresets: [],
   cards: [
-    { id: uid(), name: "Дебетовая", type: "debit", balance: 0, currency: "RUB", debtZeroSince: null },
-    { id: uid(), name: "Кредитная", type: "credit", balance: 0, currency: "RUB", debtZeroSince: null },
+    { id: uid(), name: "Дебетовая", type: "debit", balance: 0, currency: "RUB", debtZeroSince: null, cashback: [] },
+    { id: uid(), name: "Кредитная", type: "credit", balance: 0, currency: "RUB", debtZeroSince: null, cashback: [] },
   ],
   goals: [],
   transactions: [],
@@ -392,6 +409,24 @@ async function deleteCard(id){
 }
 async function setLimits(fixed, lifestyle){ state.limits = { fixed, lifestyle }; await persist(); }
 async function setShowDebtTracking(value){ state.showDebtTracking = value; await persist(); }
+async function addTagPreset(tag){
+  tag = tag.trim().toLowerCase();
+  if(!tag || state.tagPresets.includes(tag)) return;
+  state.tagPresets = [...state.tagPresets, tag];
+  await persist();
+}
+async function removeTagPreset(tag){
+  state.tagPresets = state.tagPresets.filter(t=>t!==tag);
+  await persist();
+}
+async function addCashback(cardId, entry){
+  state.cards = state.cards.map(c=> c.id===cardId ? {...c, cashback:[...(c.cashback||[]), {...entry, id: uid()}]} : c);
+  await persist();
+}
+async function removeCashback(cardId, cbId){
+  state.cards = state.cards.map(c=> c.id===cardId ? {...c, cashback:(c.cashback||[]).filter(cb=>cb.id!==cbId)} : c);
+  await persist();
+}
 async function setBaseCurrency(code){ state.baseCurrency = code; await persist(); }
 async function setRate(code, value){ state.rates = { ...state.rates, [code]: value }; await persist(); }
 async function addCurrency(code, symbol){
@@ -490,7 +525,7 @@ function render(){
       </div>
     </header>
     <nav class="tabs">
-      ${tabBtn("dashboard","Дашборд")}${tabBtn("transactions","Операции")}${tabBtn("cards","Карты")}${tabBtn("goals","Цели")}${tabBtn("settings","Настройки")}
+      ${tabBtn("dashboard","Дашборд")}${tabBtn("transactions","Операции")}${tabBtn("tags","По тегам")}${tabBtn("cards","Карты")}${tabBtn("cashback","Кэшбэки")}${tabBtn("goals","Цели")}${tabBtn("settings","Настройки")}
     </nav>
     <div class="stack">${renderTab()}</div>
   `;
@@ -502,7 +537,9 @@ function tabBtn(key,label){ return `<button class="tab ${ui.tab===key?'active':'
 function renderTab(){
   if(ui.tab==="dashboard") return renderDashboard();
   if(ui.tab==="transactions") return renderTransactions();
+  if(ui.tab==="tags") return renderTagAnalysis();
   if(ui.tab==="cards") return renderCards();
+  if(ui.tab==="cashback") return renderCashback();
   if(ui.tab==="goals") return renderGoals();
   if(ui.tab==="settings") return renderSettings();
 }
@@ -627,7 +664,8 @@ function limitBar(label, spentInfo, limit, pattern){
 
 function renderTransactions(){
   const monthTx = state.transactions.filter(t=>monthKey(t.date)===ui.month);
-  const allTags = Array.from(new Set(state.transactions.flatMap(t=>t.tags||[]))).sort();
+  const allTags = Array.from(new Set([...state.tagPresets, ...state.transactions.flatMap(t=>t.tags||[])])).sort();
+  const monthTags = Array.from(new Set(monthTx.flatMap(t=>t.tags||[]))).sort();
   const filtered = ui.activeTag ? monthTx.filter(t=>(t.tags||[]).includes(ui.activeTag)) : monthTx;
   const sorted = [...filtered].sort((a,b)=> a.date<b.date?1:-1);
 
@@ -693,9 +731,9 @@ function renderTransactions(){
     <div class="panel">
       <div class="panel-title-row">
         <div class="panel-title">Операции — ${fmtMonth(ui.month)}</div>
-        ${allTags.length ? `<div class="tag-filter">
+        ${monthTags.length ? `<div class="tag-filter">
           <button class="chip ${!ui.activeTag?'active':''}" data-tag="">все</button>
-          ${allTags.map(t=>`<button class="chip ${ui.activeTag===t?'active':''}" data-tag="${esc(t)}">#${esc(t)}</button>`).join("")}
+          ${monthTags.map(t=>`<button class="chip ${ui.activeTag===t?'active':''}" data-tag="${esc(t)}">#${esc(t)}</button>`).join("")}
         </div>` : ""}
       </div>
       <div class="tx-list">
@@ -730,6 +768,56 @@ function renderTransactions(){
             <button class="tx-delete" data-del-tx="${t.id}" aria-label="удалить">✕</button>
           </div>`;
         }).join("") || `<div class="empty">Операций не найдено</div>`}
+      </div>
+    </div>
+  `;
+}
+
+function renderTagAnalysis(){
+  const monthTx = state.transactions.filter(t=>monthKey(t.date)===ui.month && t.type==="expense");
+  const byTag = {};
+  let untagged = 0;
+  const missing = new Set();
+  let totalKnown = 0;
+
+  monthTx.forEach(t=>{
+    const v = convertToBase(t.amount, t.currency || state.baseCurrency);
+    if(v == null){ missing.add(t.currency); return; }
+    totalKnown += v;
+    if(t.tags && t.tags.length){
+      t.tags.forEach(tag=>{ byTag[tag] = (byTag[tag]||0) + v; });
+    } else {
+      untagged += v;
+    }
+  });
+
+  const rows = Object.entries(byTag).sort((a,b)=>b[1]-a[1]);
+  const maxVal = Math.max(untagged, ...rows.map(r=>r[1]), 1);
+
+  return `
+    ${monthSwitcher()}
+    <div class="panel">
+      <div class="panel-title">Расходы по тегам — ${fmtMonth(ui.month)}</div>
+      <div class="tag-total mono">Всего с тегами и без: ${fmtMoney(totalKnown)}</div>
+      ${missing.size ? `<div class="limit-note">не учтено (${Array.from(missing).join(", ")}) — укажи курс в настройках</div>` : ""}
+      <div class="tag-bars">
+        ${rows.map(([tag, val])=>`
+          <div class="tag-bar-row">
+            <div class="tag-bar-head">
+              <span>#${esc(tag)}</span>
+              <span class="mono">${fmtMoney(val)}</span>
+            </div>
+            <div class="tag-bar-track"><div class="tag-bar-fill" style="width:${(val/maxVal)*100}%"></div></div>
+          </div>`).join("") || ""}
+        ${untagged > 0.0001 ? `
+          <div class="tag-bar-row">
+            <div class="tag-bar-head">
+              <span style="color:var(--ink-faint);">без тегов</span>
+              <span class="mono" style="color:var(--ink-faint);">${fmtMoney(untagged)}</span>
+            </div>
+            <div class="tag-bar-track"><div class="tag-bar-fill untagged" style="width:${(untagged/maxVal)*100}%"></div></div>
+          </div>` : ""}
+        ${(rows.length===0 && untagged<=0.0001) ? `<div class="empty">Расходов в этом месяце нет</div>` : ""}
       </div>
     </div>
   `;
@@ -777,6 +865,37 @@ function renderCards(){
       <label class="field">Начальный баланс/долг<input class="mono" type="number" id="card-balance" placeholder="0"></label>
       <button type="submit" class="btn-primary">Добавить карту</button>
     </form>
+  `;
+}
+
+function renderCashback(){
+  if(state.cards.length === 0){
+    return `<div class="panel"><div class="empty">Сначала добавьте карты во вкладке «Карты»</div></div>`;
+  }
+  return `
+    <div class="stack">
+      ${state.cards.map(c=>`
+        <div class="panel">
+          <div class="panel-title">${esc(c.name)} <span style="color:var(--ink-faint); font-weight:400;">· ${c.currency}</span></div>
+          <div class="cashback-list">
+            ${(c.cashback||[]).map(cb=>`
+              <div class="cashback-row">
+                <div class="cashback-main">
+                  <span class="cashback-category">${esc(cb.category)}</span>
+                  <span class="cashback-percent mono">${cb.percent}%</span>
+                </div>
+                ${cb.note ? `<div class="cashback-note">${esc(cb.note)}</div>` : ""}
+                <button class="tx-delete" data-del-cashback="${c.id}:${cb.id}" aria-label="удалить">✕</button>
+              </div>`).join("") || `<div class="empty">Категорий кэшбэка пока нет</div>`}
+          </div>
+          <div class="cashback-add-row" data-cashback-card="${c.id}">
+            <input type="text" placeholder="категория, напр. рестораны" class="cb-category">
+            <input type="number" placeholder="%" class="cb-percent" min="0" max="100" step="0.1">
+            <input type="text" placeholder="заметка (период, лимит)" class="cb-note">
+            <button type="button" class="btn-secondary cb-add-btn">Добавить</button>
+          </div>
+        </div>`).join("")}
+    </div>
   `;
 }
 
@@ -865,6 +984,23 @@ function renderSettings(){
           <span class="switch-track"></span>
         </span>
       </label>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Теги</div>
+      <div class="toggle-row-sub" style="margin-bottom:10px;">
+        Список тегов для расходов и доходов — появятся в подсказках при добавлении операции, даже до первого использования.
+      </div>
+      <div class="tag-filter" style="margin-bottom:12px;">
+        ${state.tagPresets.map(t=>`
+          <span class="chip static" style="display:inline-flex; align-items:center; gap:6px;">
+            #${esc(t)} <button class="currency-del" data-del-tag-preset="${esc(t)}" title="удалить тег">✕</button>
+          </span>`).join("") || `<span class="empty" style="padding:0;">Пресетов пока нет</span>`}
+      </div>
+      <form id="tag-preset-form" class="form-row">
+        <label class="field">Новый тег<input type="text" id="new-tag-preset" placeholder="например, кофе"></label>
+        <button type="submit" class="btn-primary" style="align-self:flex-end;">Добавить</button>
+      </form>
     </div>
 
     <div class="panel">
@@ -1032,6 +1168,39 @@ function attachHandlers(){
       if(code) addCurrency(code, symbol);
     });
   }
+
+  // теги-пресеты
+  document.querySelectorAll("[data-del-tag-preset]").forEach(el=>{
+    el.addEventListener("click", ()=> removeTagPreset(el.dataset.delTagPreset));
+  });
+  const tagPresetForm = document.getElementById("tag-preset-form");
+  if(tagPresetForm){
+    tagPresetForm.addEventListener("submit", (e)=>{
+      e.preventDefault();
+      const input = document.getElementById("new-tag-preset");
+      if(input.value.trim()) addTagPreset(input.value);
+    });
+  }
+
+  // кэшбэк по картам
+  document.querySelectorAll("[data-del-cashback]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const [cardId, cbId] = el.dataset.delCashback.split(":");
+      removeCashback(cardId, cbId);
+    });
+  });
+  document.querySelectorAll("[data-cashback-card]").forEach(row=>{
+    const cardId = row.dataset.cashbackCard;
+    const btn = row.querySelector(".cb-add-btn");
+    if(!btn) return;
+    btn.addEventListener("click", ()=>{
+      const category = row.querySelector(".cb-category").value.trim();
+      const percent = Number(row.querySelector(".cb-percent").value);
+      const note = row.querySelector(".cb-note").value.trim();
+      if(!category || !percent) return;
+      addCashback(cardId, { category, percent, note });
+    });
+  });
 }
 
 init();
