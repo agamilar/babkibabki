@@ -42,6 +42,7 @@
         font-size:16px; color:var(--ink); cursor:pointer; }
   .month-label{ font-family:var(--font-display); font-size:14.5px; font-weight:600; text-transform:capitalize; min-width:130px; text-align:center; }
 
+  .grid-4{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
   .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
   .grid-2{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
   .summary-card{ background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:14px 12px; }
@@ -129,7 +130,7 @@
   .tx-delete:hover{ color:var(--debt); }
 
   .card-full-list{ display:flex; flex-direction:column; gap:10px; }
-  .card-full-row{ display:grid; grid-template-columns:1.3fr .9fr .8fr 1fr auto; gap:8px; align-items:center; }
+  .card-full-row{ display:grid; grid-template-columns:1.2fr .8fr .8fr .7fr 1fr auto; gap:8px; align-items:center; }
   .card-full-row select{ font-family:var(--font-body); font-size:13px; border:1.5px solid var(--line); border-radius:8px; padding:8px; background:var(--bg); width:100%; }
   .card-name-input{ font-family:var(--font-body); font-size:13.5px; font-weight:500; border:1.5px solid var(--line); border-radius:8px; padding:8px 9px; background:var(--bg); width:100%; }
   .balance-edit{ display:flex; align-items:center; gap:6px; }
@@ -188,8 +189,11 @@
   .login-msg{ font-size:12px; color:var(--ink-soft); margin-top:10px; }
   .login-msg.error{ color:var(--debt); }
 
+  @media (max-width:600px){
+    .grid-4{ grid-template-columns:repeat(2,1fr); }
+  }
   @media (max-width:480px){
-    .grid-3, .grid-2{ grid-template-columns:1fr; }
+    .grid-4, .grid-3, .grid-2{ grid-template-columns:1fr; }
     .form-row, .form-row-3{ grid-template-columns:1fr; }
     .card-full-row{ grid-template-columns:1fr; }
     .currency-row{ grid-template-columns:1fr; }
@@ -204,9 +208,9 @@
 "use strict";
 
 // ====== НАСТРОЙ ЭТИ ДВЕ СТРОКИ ПОСЛЕ СОЗДАНИЯ ПРОЕКТА В SUPABASE ======
-const SUPABASE_URL = "https://jjakzfcysqwqptuoqzmj.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_gRAQcVU0QYgnTfYXiB1jTw_UxkRIAe8";
-
+const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+// =======================================================================
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -222,7 +226,7 @@ const DEFAULT_STATE = {
   limits: { fixed: 60000, lifestyle: 40000 },
   tagPresets: [],
   cards: [
-    { id: uid(), name: "Дебетовая", type: "debit", balance: 0, currency: "RUB", debtZeroSince: null, cashback: [] },
+    { id: uid(), name: "Дебетовая", type: "debit", balance: 0, currency: "RUB", debtZeroSince: null, cashback: [], purpose: "spending" },
     { id: uid(), name: "Кредитная", type: "credit", balance: 0, currency: "RUB", debtZeroSince: null, cashback: [] },
   ],
   goals: [],
@@ -261,6 +265,7 @@ function esc(s){
   return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 function catLabel(cat){ return cat === "fixed" ? "Обязательные" : "Образ жизни"; }
+function cardPurpose(c){ return c.purpose === "savings" ? "savings" : "spending"; }
 function convertToBase(amount, code){
   if(code === state.baseCurrency) return amount;
   const r = state.rates[code];
@@ -295,10 +300,23 @@ function normalizeCards(){
 
 // ---------- auth ----------
 async function init(){
-  const { data } = await sb.auth.getSession();
-  session = data.session;
-  sb.auth.onAuthStateChange((_event, s) => { session = s; boot(); });
-  await boot();
+  try{
+    const { data } = await sb.auth.getSession();
+    session = data.session;
+    sb.auth.onAuthStateChange((_event, s) => { session = s; boot(); });
+    await boot();
+  }catch(err){
+    console.error("Ошибка инициализации:", err);
+    document.getElementById("app").innerHTML = `
+      <div style="padding:60px 20px; text-align:center; font-family:'Inter', sans-serif;">
+        <div style="font-size:15px; font-weight:600; color:#B23B3B; margin-bottom:10px;">Не удалось подключиться к Supabase</div>
+        <div style="font-size:13px; color:#6E7075; margin-bottom:14px;">
+          Скорее всего, неверно указаны SUPABASE_URL или SUPABASE_ANON_KEY в коде страницы —
+          либо проект в Supabase сейчас на паузе.
+        </div>
+        <div style="font-size:11px; color:#A6A8AC; font-family:monospace;">${esc(err && err.message ? err.message : String(err))}</div>
+      </div>`;
+  }
 }
 async function boot(){
   if(!session){ state = null; renderLogin(); return; }
@@ -577,22 +595,34 @@ function renderDashboard(){
   const spentFixedInfo = sumExpensesConverted(monthTx, "fixed");
   const spentLifestyleInfo = sumExpensesConverted(monthTx, "lifestyle");
 
-  const savingsMap = groupByCurrency(state.cards, c=>c.type==="debit");
+  const spendMap = groupByCurrency(state.cards, c=>c.type==="debit" && cardPurpose(c)==="spending");
+  const stashMap = groupByCurrency(state.cards, c=>c.type==="debit" && cardPurpose(c)==="savings");
+  const allDebitMap = groupByCurrency(state.cards, c=>c.type==="debit");
   const debtMap = groupByCurrency(state.cards, c=>c.type==="credit");
-  const savingsConv = sumConverted(savingsMap);
+  const spendConv = sumConverted(spendMap);
+  const stashConv = sumConverted(stashMap);
+  const savingsConv = sumConverted(allDebitMap);
   const debtConv = sumConverted(debtMap);
   const hasDebt = Object.values(debtMap).some(v=>v>0.0001);
+  const hasStash = Object.values(stashMap).some(v=>Math.abs(v)>0.0001);
   const missingAll = Array.from(new Set([...savingsConv.missing, ...debtConv.missing]));
   const netWorth = savingsConv.sum - debtConv.sum;
+  const tileCount = 2 + (hasStash?1:0) + (hasDebt?1:0);
 
   return `
     ${monthSwitcher()}
-    <div class="${hasDebt ? 'grid-3' : 'grid-2'}">
+    <div class="grid-${tileCount}">
       <div class="summary-card savings">
-        <div class="summary-label">Накопления</div>
-        <div class="summary-value mono tone-savings">${currencyLines(savingsMap)}</div>
-        ${Object.keys(savingsMap).length>1 && savingsConv.missing.length===0 ? `<div class="summary-sub mono">≈ ${fmtMoney(savingsConv.sum)}</div>` : ""}
+        <div class="summary-label">Доступно к трате</div>
+        <div class="summary-value mono tone-savings">${currencyLines(spendMap)}</div>
+        ${Object.keys(spendMap).length>1 && spendConv.missing.length===0 ? `<div class="summary-sub mono">≈ ${fmtMoney(spendConv.sum)}</div>` : ""}
       </div>
+      ${hasStash ? `
+      <div class="summary-card savings">
+        <div class="summary-label">Отложено (вклады)</div>
+        <div class="summary-value mono tone-savings">${currencyLines(stashMap)}</div>
+        ${Object.keys(stashMap).length>1 && stashConv.missing.length===0 ? `<div class="summary-sub mono">≈ ${fmtMoney(stashConv.sum)}</div>` : ""}
+      </div>` : ""}
       ${hasDebt ? `
       <div class="summary-card debt">
         <div class="summary-label">Долги по картам</div>
@@ -625,7 +655,7 @@ function renderDashboard(){
           <div class="card-mini">
             <div>
               <div class="card-mini-name">${esc(c.name)}</div>
-              <div class="card-mini-type">${c.type==="debit"?"дебетовая":"кредитная"} · ${c.currency}</div>
+              <div class="card-mini-type">${c.type==="debit"?"дебетовая":"кредитная"}${c.type==="debit"?(cardPurpose(c)==="savings"?" · вклад":" · для трат"):""} · ${c.currency}</div>
             </div>
             ${(state.showDebtTracking && c.type==="credit" && c.balance<=0.0001)
               ? `<div class="card-mini-nodebt">без долга · ${daysSince(c.debtZeroSince)} дн.</div>`
@@ -835,6 +865,11 @@ function renderCards(){
               <option value="debit" ${c.type==='debit'?'selected':''}>дебетовая</option>
               <option value="credit" ${c.type==='credit'?'selected':''}>кредитная</option>
             </select>
+            ${c.type==='debit' ? `
+            <select data-card-field="purpose" data-card-id="${c.id}">
+              <option value="spending" ${cardPurpose(c)==='spending'?'selected':''}>для трат</option>
+              <option value="savings" ${cardPurpose(c)==='savings'?'selected':''}>вклад</option>
+            </select>` : `<span></span>`}
             <select data-card-field="currency" data-card-id="${c.id}">
               ${state.currencies.map(cur=>`<option value="${cur.code}" ${c.currency===cur.code?'selected':''}>${cur.code}</option>`).join("")}
             </select>
@@ -862,7 +897,15 @@ function renderCards(){
           </select>
         </label>
       </div>
-      <label class="field">Начальный баланс/долг<input class="mono" type="number" id="card-balance" placeholder="0"></label>
+      <div class="form-row" id="card-purpose-wrap">
+        <label class="field">Назначение
+          <select id="card-purpose">
+            <option value="spending">Для трат</option>
+            <option value="savings">Вклад / отложено</option>
+          </select>
+        </label>
+        <label class="field">Начальный баланс/долг<input class="mono" type="number" id="card-balance" placeholder="0"></label>
+      </div>
       <button type="submit" class="btn-primary">Добавить карту</button>
     </form>
   `;
@@ -1098,15 +1141,24 @@ function attachHandlers(){
   });
   const cardForm = document.getElementById("card-form");
   if(cardForm){
+    const cardTypeSelect = document.getElementById("card-type");
+    const purposeWrap = document.getElementById("card-purpose-wrap");
+    function applyCardPurposeVisibility(){
+      const isDebit = cardTypeSelect.value === "debit";
+      document.getElementById("card-purpose").parentElement.style.display = isDebit ? "" : "none";
+    }
+    cardTypeSelect.addEventListener("change", applyCardPurposeVisibility);
+    applyCardPurposeVisibility();
     cardForm.addEventListener("submit", async (e)=>{
       e.preventDefault();
       const name = document.getElementById("card-name").value.trim();
       if(!name) return;
+      const type = cardTypeSelect.value;
       await addCard({
-        name,
-        type: document.getElementById("card-type").value,
+        name, type,
         currency: document.getElementById("card-currency").value,
         balance: Number(document.getElementById("card-balance").value)||0,
+        purpose: type === "debit" ? document.getElementById("card-purpose").value : undefined,
       });
     });
   }
