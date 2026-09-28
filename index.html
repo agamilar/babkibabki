@@ -130,6 +130,10 @@
   .tx-delete:hover{ color:var(--debt); }
 
   .card-full-list{ display:flex; flex-direction:column; gap:10px; }
+  .card-full-item{ display:flex; flex-direction:column; gap:6px; padding-bottom:10px; border-bottom:1px solid var(--line); }
+  .card-full-item:last-child{ border-bottom:none; padding-bottom:0; }
+  .card-flag{ display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--ink-soft); cursor:pointer; }
+  .card-flag input{ accent-color:var(--ink); }
   .card-full-row{ display:grid; grid-template-columns:1.2fr .8fr .8fr .7fr 1fr auto; gap:8px; align-items:center; }
   .card-full-row select{ font-family:var(--font-body); font-size:13px; border:1.5px solid var(--line); border-radius:8px; padding:8px; background:var(--bg); width:100%; }
   .card-name-input{ font-family:var(--font-body); font-size:13.5px; font-weight:500; border:1.5px solid var(--line); border-radius:8px; padding:8px 9px; background:var(--bg); width:100%; }
@@ -208,8 +212,8 @@
 "use strict";
 
 // ====== НАСТРОЙ ЭТИ ДВЕ СТРОКИ ПОСЛЕ СОЗДАНИЯ ПРОЕКТА В SUPABASE ======
-const SUPABASE_URL = "https://jjakzfcysqwqptuoqzmj.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_gRAQcVU0QYgnTfYXiB1jTw_UxkRIAe8";
+const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
 // =======================================================================
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -859,6 +863,7 @@ function renderCards(){
       <div class="panel-title">Карты</div>
       <div class="card-full-list">
         ${sortedCards().map(c=>`
+          <div class="card-full-item">
           <div class="card-full-row">
             <input class="card-name-input" value="${esc(c.name)}" data-card-field="name" data-card-id="${c.id}">
             <select data-card-field="type" data-card-id="${c.id}">
@@ -878,6 +883,11 @@ function renderCards(){
               <input class="mono" type="number" value="${c.balance}" data-card-field="balance" data-card-id="${c.id}">
             </div>
             <button class="tx-delete" data-del-card="${c.id}" aria-label="удалить карту">✕</button>
+          </div>
+          <label class="card-flag">
+            <input type="checkbox" data-card-field="showCashback" data-card-id="${c.id}" ${c.showCashback!==false?'checked':''}>
+            отображать во вкладке «Кэшбэки»
+          </label>
           </div>`).join("") || `<div class="empty">Карт пока нет</div>`}
       </div>
     </div>
@@ -915,9 +925,13 @@ function renderCashback(){
   if(state.cards.length === 0){
     return `<div class="panel"><div class="empty">Сначала добавьте карты во вкладке «Карты»</div></div>`;
   }
+  const visible = state.cards.filter(c=>c.showCashback !== false);
+  if(visible.length === 0){
+    return `<div class="panel"><div class="empty">Все карты скрыты из этой вкладки. Вернуть их можно галочкой «отображать во вкладке «Кэшбэки»» в разделе «Карты».</div></div>`;
+  }
   return `
     <div class="stack">
-      ${state.cards.map(c=>`
+      ${visible.map(c=>`
         <div class="panel">
           <div class="panel-title">${esc(c.name)} <span style="color:var(--ink-faint); font-weight:400;">· ${c.currency}</span></div>
           <div class="cashback-list">
@@ -1132,7 +1146,8 @@ function attachHandlers(){
     el.addEventListener("change", ()=>{
       const id = el.dataset.cardId, field = el.dataset.cardField;
       let value = el.value;
-      if(field==="balance") value = Number(value)||0;
+      if(el.type==="checkbox") value = el.checked;
+      else if(field==="balance") value = Number(value)||0;
       updateCardField(id, field, value);
     });
   });
